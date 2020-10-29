@@ -13,7 +13,7 @@ An experiment using Swift's Encoder/Decoder to build data model for Couchbase Li
 
 ## Encoder and Decoder API
 
-###CBLEncoder
+### CBLEncoder
 
 ```swift
 func encode<T: CBLEncodable>(_ value: T) throws -> MutableDocument
@@ -23,7 +23,7 @@ func encode<T: CBLEncodable>(_ value: T, for documentID: String) throws -> Mutab
 func encode<T: CBLEncodable>(_ value: T, into document: MutableDocument) throws -> MutableDocument
 ```
 
-###CBLDecoder
+### CBLDecoder
 
 ```swift
 func decode<T: CBLDecodable>(_ type: T.Type, from document: Document) throws -> T
@@ -31,7 +31,7 @@ func decode<T: CBLDecodable>(_ type: T.Type, from document: Document) throws -> 
 func decode<T: CBLDecodable>(_ type: T.Type, from result: Result) throws -> T
 ```
 
-###CBLCodable
+### CBLCodable
 
 ```swift
 public protocol CBLEncodable: Encodable { }
@@ -43,7 +43,7 @@ typealias CBLCodable = CBLEncodable & CBLDecodable
 
 ## Couchbase Lite Extension API
 
-###DocumentCodable
+### DocumentCodable
 
 ```Swift
 public protocol DocumentฺEncodable: CBLEncodable {
@@ -57,24 +57,29 @@ public protocol DocumentDecodable: CBLDecodable {
 public protocol DocumentCodable: DocumentฺEncodable, DocumentDecodable { }
 ```
 
-###Database
+### DocumentCodable Extension
+```Swift
+mutating func save(into database: Database, forID id: String? = nil) throws
+```
+
+### Database
 ```Swift
 func document<T: DocumentDecodable>(withID id: String, as type: T.Type) throws -> T?
 
 func saveDocument<T: DocumentฺEncodable>(_ encodable: inout T, forID id: String? = nil) throws
 ```
 
-###Document
+### Document
 ```Swift
 func decode<T: DocumentDecodable>(_ type: T.Type) throws -> T
 ```
 
-###Result
+### Result
 ```Swift
 func decode<T: CBLDecodable>(_ type: T.Type) throws -> T
 ```
 
-###ResultSet
+### ResultSet
 ```Swift
 func decode<T: CBLDecodable>(_ type: T.Type) throws -> [T]
 ```
@@ -92,20 +97,20 @@ func decode<T: CBLDecodable>(_ type: T.Type) throws -> [T]
 
 ## Example
 
-###Model
+### Model
 
 ```Swift
 struct Student: DocumentCodable {
-	// Required by DocumentCodable
-	var document: MutableDocument?
+    // Required by DocumentCodable
+    var document: MutableDocument?
+    
+    var name: String
+    var dob: Date?
+    var address: Address?
+    var contacts: [Person]?
 	
-	var name: String
-	var dob: Date?
-	var address: Address?
-	var contacts: [Person]?
-	
-	// Required for ignoring the document property
-	enum CodingKeys: String, CodingKey {
+    // Required for ignoring the document property
+    enum CodingKeys: String, CodingKey {
         case name
         case dob
         case address
@@ -124,7 +129,7 @@ struct Address: CBLCodable {
 ```
 When using DocumentCodable, the document property is required so that the model object could enclose its associated version of the document which the model object is encoded into or which the model object is decoded from.
 
-###Save Model Object
+### Save Model Object
 
 ```Swift
 // Create Student Object
@@ -138,12 +143,12 @@ try student.save(into: self.db, forID: "student1")
 
 ```
 
-###Get Model Object
+### Get Model Object
 ```Swift
 let student = try self.db.document(withID: "student1", as: Student.self)
 ```
 
-###Query Results
+### Query Results
 ```Swift
 // Query
 let results = try QueryBuilder

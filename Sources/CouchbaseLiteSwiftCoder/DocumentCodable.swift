@@ -1,7 +1,7 @@
 import CouchbaseLiteSwift
 
 public protocol DocumentฺEncodable: CBLEncodable {
-    var document: MutableDocument? { get set }
+    var document: MutableDocument! { get set }
 }
 
 public protocol DocumentDecodable: CBLDecodable {
@@ -11,10 +11,9 @@ public protocol DocumentDecodable: CBLDecodable {
 public protocol DocumentCodable: DocumentฺEncodable, DocumentDecodable { }
 
 extension DocumentฺEncodable {
-    public mutating func save(into database: Database, forID id: String? = nil) throws {
-        let document = try CBLEncoder().encode(self, into: self.document ?? MutableDocument(id: id))
+    public func save(into database: Database) throws {
+        let document = try CBLEncoder().encode(self, into: self.document)
         try database.saveDocument(document)
-        if self.document == nil { self.document = document }
     }
 }
 
@@ -34,8 +33,8 @@ extension Database {
         return try document.decode(type)
     }
     
-    public func saveDocument<T: DocumentฺEncodable>(_ encodable: inout T, forID id: String? = nil) throws {
-        try encodable.save(into: self, forID: id)
+    public func saveDocument<T: DocumentฺEncodable>(_ encodable: T) throws {
+        try encodable.save(into: self)
     }
 }
 

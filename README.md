@@ -47,7 +47,7 @@ typealias CBLCodable = CBLEncodable & CBLDecodable
 
 ```Swift
 public protocol DocumentฺEncodable: CBLEncodable {
-    var document: MutableDocument? { get set }
+    var document: MutableDocument! { get set }
 }
 
 public protocol DocumentDecodable: CBLDecodable {
@@ -57,16 +57,18 @@ public protocol DocumentDecodable: CBLDecodable {
 public protocol DocumentCodable: DocumentฺEncodable, DocumentDecodable { }
 ```
 
+When implementing DocumentCodable, the document property is required so that the model object could enclose its associated version of the document, which the model object is encoded into or which the model object decodes from.
+
 ### DocumentCodable Extension
 ```Swift
-mutating func save(into database: Database, forID id: String? = nil) throws
+mutating func save(into database: Database) throws
 ```
 
 ### Database
 ```Swift
 func document<T: DocumentDecodable>(withID id: String, as type: T.Type) throws -> T?
 
-func saveDocument<T: DocumentฺEncodable>(_ encodable: inout T, forID id: String? = nil) throws
+func saveDocument<T: DocumentฺEncodable>(_ encodable: T) throws
 ```
 
 ### Document
@@ -97,24 +99,49 @@ func decode<T: CBLDecodable>(_ type: T.Type) throws -> [T]
 
 ## Example
 
-### Model
+### Use CBLEncoder and CBLDecoder
 
 ```Swift
-struct Student: DocumentCodable {
-    // Required by DocumentCodable
-    var document: MutableDocument?
+struct Student: CBLCodable {
+    var name: String
+    var grade: Int
+}
+
+// Encode
+let student1 = Student(name: "James", grade: 1)
+let encoder = CBLEncoder()
+let doc1 = try encoder.encode(student1)
+
+// Decode
+let doc2 = try self.db.document(withID: "student2")
+let decoder = CBLDecoder()
+let student2 = try decoder.decode(Person.self, from: doc2) 
+```
+
+### Define Data Model using DocumentCodable
+```Swift
+struct Employee: DocumentCodable {
+    // Required
+    var document: MutableDocument!
     
+    // Model Properties
     var name: String
     var dob: Date?
     var address: Address?
     var contacts: [Person]?
 	
-    // Required for ignoring the document property
+    // Coding Keys
     enum CodingKeys: String, CodingKey {
         case name
         case dob
         case address
         case contacts
+    }
+    
+    // Constructor
+    init(id: String? = nil, name: String) {
+        self.document = MutableDocument(id: id)
+        self.name = name
     }
 }
 
@@ -127,40 +154,41 @@ struct Address: CBLCodable {
     let street: String
 }
 ```
-When using DocumentCodable, the document property is required so that the model object could enclose its associated version of the document which the model object is encoded into or which the model object is decoded from.
 
-### Save Model Object
+**Note:** The CodkingKeys is currently required for ignoring the document property from being encoded or decoded.
+
+### Save DocumentCodable Model Object
 
 ```Swift
-// Create Student Object
-var student = Student(name: "Daniel")
-student.dob = dateObject
-student.address = Address(street: "1 Main Street")
-student.contacts = [Person(name: "James", phone: "650-123-4567")]
+// Create an employee object
+var employee = Employee(name: "Jimmy")
+employee.dob = dob
+employee.address = Address(street: "1 Main Street")
+employee.contacts = [Person(name: "Jackson", phone: "650-123-4567")]
 
 // Save
-try student.save(into: self.db, forID: "student1")
-
+try employee(into: self.db)
 ```
 
-### Get Model Object
+### Get DocumentCodable Model Object
 ```Swift
-let student = try self.db.document(withID: "student1", as: Student.self)
+let employee = try self.db.document(withID: "emp1", as: Employee.self)
 ```
 
-### Query Results
+### Decode Query Results
 ```Swift
 // Query
 let results = try QueryBuilder
-            .select(SelectResult.property("name"),
-                    SelectResult.property("address"),
-                    SelectResult.property("dob"),
-                    SelectResult.property("contacts"),
-                    SelectResult.property("photo"))
-            .from(DataSource.database(self.db))
-            .execute()
+	.select(
+		SelectResult.property("name"),
+		SelectResult.property("address"),
+		SelectResult.property("dob"),
+		SelectResult.property("contacts"),
+		SelectResult.property("photo"))
+	.from(DataSource.database(self.db))
+	.execute()
 
 // Decode
-let students = try results.decode(Student.self)
+let employees = try results.decode(Employee.self)
 ```
 

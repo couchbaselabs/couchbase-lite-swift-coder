@@ -15,12 +15,12 @@ final class DocumentCodableTests: XCTestCase {
     }
     
     func testSaveModel() throws {
-        var student = Student(name: "Daniel")
+        var student = Student(id: "doc1", name: "Daniel")
         student.address = Address(street: "1 Main Street")
         student.contacts = [Person(name: "James")]
         student.dob = "1980-01-01T00:00:00.000Z".toDate()
         student.photo = Blob(contentType: "text/plain", data: "MyPhoto".data(using: .utf8)!)
-        try student.save(into: self.db, forID: "doc1")
+        try student.save(into: self.db)
         
         XCTAssertEqual(student.document?.id, "doc1")
         XCTAssertTrue(student.document?.toDictionary() ?? [:] == [

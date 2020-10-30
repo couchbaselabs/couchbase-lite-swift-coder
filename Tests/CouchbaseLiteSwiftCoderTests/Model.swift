@@ -113,7 +113,7 @@ struct OptTypedModel: CBLCodable {
 }
 
 struct Student: DocumentCodable {
-    var document: MutableDocument?
+    var document: MutableDocument!
     
     var name: String
     var dob: Date?
@@ -127,5 +127,10 @@ struct Student: DocumentCodable {
         case photo
         case address
         case contacts
+    }
+    
+    init(id: String? = nil, name: String) {
+        self.document = MutableDocument(id: id)
+        self.name = name
     }
 }

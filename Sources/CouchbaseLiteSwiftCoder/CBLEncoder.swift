@@ -75,6 +75,8 @@ private class _CBLEncoder: Encoder {
             pushContainer(MutableArrayObject())
             try value.encode(to: self)
             return popContainer()
+        case let data as Data:
+            return Blob(contentType: "application/octet-stream", data: data)
         default:
             return value
         }

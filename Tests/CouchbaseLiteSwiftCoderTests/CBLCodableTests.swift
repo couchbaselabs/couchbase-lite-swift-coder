@@ -129,13 +129,18 @@ final class CBLCodableTests: XCTestCase {
     }
     
     func testTypedEncoder() throws {
+        let content = "MyData".data(using: .utf8)!
+        let blob = Blob(contentType: "text/plain", data: content)
+        
         let model = TypedModel(
             bool: true,
             double: 10.5, float: 10.5,
             int: 10, int8: 10, int16: 10, int32: 10, int64: 10,
             uint: 20, uint8: 20, uint16: 20, uint32: 20, uint64: 20,
             str: "Hello",
-            date: "2000-01-01T00:00:00.000Z".toDate())
+            date: "2000-01-01T00:00:00.000Z".toDate(),
+            data: content,
+            blob: blob)
         
         let encoder = CBLEncoder()
         let doc = try encoder.encode(model)
@@ -145,17 +150,25 @@ final class CBLCodableTests: XCTestCase {
             "int": 10, "int8": 10, "int16": 10, "int32": 10, "int64": 10,
             "uint": 20, "uint8": 20, "uint16": 20, "uint32": 20, "uint64": 20,
             "str": "Hello",
-            "date": "2000-01-01T00:00:00.000Z"
+            "date": "2000-01-01T00:00:00.000Z",
+            "data": doc.blob(forKey: "data")!,
+            "blob": doc.blob(forKey: "blob")!,
         ])
+        XCTAssertEqual(doc.blob(forKey: "data")?.content, content)
+        XCTAssertEqual(doc.blob(forKey: "blob")?.content, content)
     }
     
     func testTypedDecoder() throws {
+        let content = "MyData".data(using: .utf8)!
+        let blob = Blob(contentType: "text/plain", data: content)
+        
         let doc = MutableDocument(data: [
             "bool": true,
             "double": 10.5, "float": 10.5,
             "int": 10, "int8": 10, "int16": 10, "int32": 10, "int64": 10,
             "uint": 20, "uint8": 20, "uint16": 20, "uint32": 20, "uint64": 20,
-            "str": "Hello", "date": "2000-01-01T00:00:00.000Z"
+            "str": "Hello", "date": "2000-01-01T00:00:00.000Z",
+            "data": content, "blob": blob
         ])
         
         let decoder = CBLDecoder()
@@ -174,9 +187,14 @@ final class CBLCodableTests: XCTestCase {
         XCTAssertEqual(model.uint64, 20)
         XCTAssertEqual(model.str, "Hello")
         XCTAssertEqual(model.date, "2000-01-01T00:00:00.000Z".toDate())
+        XCTAssertEqual(model.data, content)
+        XCTAssertEqual(model.blob.content, content)
     }
     
     func testOptTypedEncoder() throws {
+        let content = "MyData".data(using: .utf8)!
+        let blob = Blob(contentType: "text/plain", data: content)
+        
         var model = OptTypedModel()
         let encoder = CBLEncoder()
         var doc = try encoder.encode(model)
@@ -196,6 +214,8 @@ final class CBLCodableTests: XCTestCase {
         model.uint64 = 100
         model.str = "Hello World"
         model.date = "2000-12-01T00:00:00.000Z".toDate()
+        model.data = content
+        model.blob = blob
         
         doc = try encoder.encode(model)
         XCTAssertTrue(doc.toDictionary() == [
@@ -212,12 +232,19 @@ final class CBLCodableTests: XCTestCase {
             "uint32": 100,
             "uint64": 100,
             "str": "Hello World",
-            "date": "2000-12-01T00:00:00.000Z"
+            "date": "2000-12-01T00:00:00.000Z",
+            "data": doc.blob(forKey: "data")!,
+            "blob": doc.blob(forKey: "blob")!,
         ])
+        XCTAssertEqual(doc.blob(forKey: "data")?.content, content)
+        XCTAssertEqual(doc.blob(forKey: "blob")?.content, content)
     }
     
     func testOptTypedDecoder() throws {
         var doc = MutableDocument()
+        
+        let content = "MyData".data(using: .utf8)!
+        let blob = Blob(contentType: "text/plain", data: content)
         
         let decoder = CBLDecoder()
         var model = try decoder.decode(OptTypedModel.self, from: doc)
@@ -235,13 +262,16 @@ final class CBLCodableTests: XCTestCase {
         XCTAssertNil(model.uint64)
         XCTAssertNil(model.str)
         XCTAssertNil(model.date)
+        XCTAssertNil(model.data)
+        XCTAssertNil(model.blob)
         
         doc = MutableDocument(data: [
             "bool": true,
             "double": 10.5, "float": 10.5,
             "int": 10, "int8": 10, "int16": 10, "int32": 10, "int64": 10,
             "uint": 20, "uint8": 20, "uint16": 20, "uint32": 20, "uint64": 20,
-            "str": "Hello", "date": "2000-01-01T00:00:00.000Z"
+            "str": "Hello", "date": "2000-01-01T00:00:00.000Z",
+            "data": content, "blob": blob
         ])
         
         model = try decoder.decode(OptTypedModel.self, from: doc)
@@ -259,6 +289,8 @@ final class CBLCodableTests: XCTestCase {
         XCTAssertEqual(model.uint64, 20)
         XCTAssertEqual(model.str, "Hello")
         XCTAssertEqual(model.date, "2000-01-01T00:00:00.000Z".toDate())
+        XCTAssertEqual(model.data, content)
+        XCTAssertEqual(model.blob?.content, content)
     }
 }
 

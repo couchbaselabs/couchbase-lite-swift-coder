@@ -74,6 +74,9 @@ private class _CBLDecoder: Decoder {
             let v = try T.init(from: self)
             popContainer()
             return v
+        case is Data.Type:
+            guard let blob = value as? Blob else { return nil }
+            return blob.content as? T
         default:
             return value as? T
         }
@@ -211,7 +214,7 @@ private struct DictionaryDecodingContainer<Key: CodingKey>: KeyedDecodingContain
         
         let unboxed = try self.decoder.unbox(value, as: type)
         guard let decoded = unboxed else {
-            throw DecodingError.invalidValueError(type: type, path: codingPath)
+            throw DecodingError.unsupportedTypeError(type: type, path: self.decoder.codingPath)
         }
         return decoded
     }
@@ -223,7 +226,7 @@ private struct DictionaryDecodingContainer<Key: CodingKey>: KeyedDecodingContain
         try checkExists(forKey: key)
         
         guard let dict = dictionary.dictionary(forKey: key.stringValue) else {
-            throw DecodingError.invalidValueError(type: type, path: self.codingPath)
+            throw DecodingError.invalidValueError(type: type, path: self.decoder.codingPath)
         }
         
         let container = DictionaryDecodingContainer<NestedKey>(decoder: decoder, dictionary: dict)
@@ -424,7 +427,7 @@ private struct ArrayDecodingContainer: UnkeyedDecodingContainer {
         defer { self.currentIndex += 1 }
         
         guard let dict = array.dictionary(at: currentIndex) else {
-            throw DecodingError.invalidValueError(type: type, path: self.codingPath)
+            throw DecodingError.invalidValueError(type: type, path: self.decoder.codingPath)
         }
         
         let container = DictionaryDecodingContainer<NestedKey>(decoder: decoder, dictionary: dict)
@@ -437,7 +440,7 @@ private struct ArrayDecodingContainer: UnkeyedDecodingContainer {
         defer { self.currentIndex += 1 }
         
         guard let arrayObject = array.array(at: currentIndex) else {
-            throw DecodingError.invalidValueError(type: Array<Any>.self, path: self.codingPath)
+            throw DecodingError.invalidValueError(type: Array<Any>.self, path: self.decoder.codingPath)
         }
         
         return ArrayDecodingContainer(decoder: decoder, array: arrayObject)
@@ -483,7 +486,13 @@ extension DecodingError {
     }
     
     static func invalidValueError(type: Any.Type, path: [CodingKey]) -> DecodingError {
-        let description = "Expected \(type) but found invalid type value"
+        let description = "Invalid Couchbase Lite value for decoding '\(type)'"
+        let context = DecodingError.Context.init(codingPath: path, debugDescription: description)
+        return DecodingError.typeMismatch(type, context)
+    }
+    
+    static func unsupportedTypeError(type: Any.Type, path: [CodingKey]) -> DecodingError {
+        let description = "Decoding or unsupported data type error for data type '\(type)'"
         let context = DecodingError.Context.init(codingPath: path, debugDescription: description)
         return DecodingError.typeMismatch(type, context)
     }

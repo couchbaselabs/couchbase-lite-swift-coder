@@ -92,6 +92,8 @@ struct TypedModel: CBLCodable {
     var uint64: UInt64
     var str: String
     var date: Date
+    var data: Data
+    var blob: Blob
 }
 
 struct OptTypedModel: CBLCodable {
@@ -110,6 +112,8 @@ struct OptTypedModel: CBLCodable {
     var uint64: UInt64?
     var str: String?
     var date: Date?
+    var data: Data?
+    var blob: Blob?
 }
 
 struct Student: DocumentCodable {

@@ -27,11 +27,28 @@ private class _CBLEncoder: Encoder {
     
     let document: MutableDocument
     
-    var containers: [Any] = []
+    var storage: [Any] = []
+    
+    /// Returns whether a new element can be encoded at this coding path.
+    var canEncodeNewValue: Bool {
+        // Every time a new value gets encoded, the key it's encoded for is pushed onto the coding
+        // path (even if it's a nil key from an unkeyed container).
+        //
+        // At the same time, every time a container is requested, a new value gets pushed onto the
+        // storage stack. If there are more values on the storage stack than on the coding path,
+        // it means the value is requesting more than one container, which violates the precondition.
+        //
+        // This means that anytime something that can request a new container goes onto the stack,
+        // we MUST push a key onto the coding path.
+        //
+        // Things which will not request containers do not need to have the coding path extended
+        // for them but always putting the coding path could be a good idea for logic consistency.
+        return self.storage.count == self.codingPath.count
+    }
     
     init(with document: MutableDocument) {
         self.document = document
-        containers.append(document)
+        storage.append(document)
     }
     
     func container<Key>(keyedBy type: Key.Type) -> KeyedEncodingContainer<Key> where Key : CodingKey {
@@ -49,36 +66,52 @@ private class _CBLEncoder: Encoder {
     }
     
     func dictionaryContainer() -> MutableDictionaryProtocol {
-        return containers.last as! MutableDictionaryProtocol
+        if self.canEncodeNewValue {
+            pushStorage(MutableDictionaryObject())
+        }
+        guard let container = storage.last as? MutableDictionaryProtocol else {
+            preconditionFailure("Invalid dictionary container requested at path '\(self.codingPath)'")
+        }
+        return container
     }
     
     func arrayContainer() -> MutableArrayProtocol {
-        return containers.last as! MutableArrayProtocol
+        if self.canEncodeNewValue {
+            pushStorage(MutableArrayObject())
+        }
+        guard let container = storage.last as? MutableArrayProtocol else {
+            preconditionFailure("Invalid array container requested at path '\(self.codingPath)'")
+        }
+        return container
     }
     
-    func pushContainer(_ container: Any) {
-        containers.append(container)
+    func pushStorage(_ item: Any) {
+        storage.append(item)
     }
     
-    func popContainer() -> Any {
-        assert(containers.count > 1)
-        return containers.popLast()!
+    func popStorage() -> Any {
+        assert(storage.count > 1)
+        return storage.popLast()!
     }
-    
-    func boxValue<T>(_ value: T) throws -> Any where T : Encodable {
+}
+
+extension _CBLEncoder {
+    func box<T>(_ value: T) throws -> Any where T : Encodable {
         switch value {
-        case _ as CBLEncodable:
-            pushContainer(MutableDictionaryObject())
+        case is Array<Any>:
             try value.encode(to: self)
-            return popContainer()
-        case _ as Array<Any>:
-            pushContainer(MutableArrayObject())
-            try value.encode(to: self)
-            return popContainer()
-        case let data as Data:
-            return Blob(contentType: "application/octet-stream", data: data)
-        default:
+            return popStorage()
+        case is Blob:
             return value
+        case is Data:
+            return Blob(data: value as! Data)
+        case is Date:
+            return value
+        case is CBLEncodable:
+            try value.encode(to: self)
+            return popStorage()
+        default:
+            throw EncodingError.invalidValueError(value: value, path: self.codingPath)
         }
     }
 }
@@ -91,17 +124,101 @@ private struct DictionaryEncodingContainer<Key: CodingKey>: KeyedEncodingContain
     let dictionary: MutableDictionaryProtocol
     
     mutating func encodeNil(forKey key: Key) throws {
+        self.encoder.codingPath.append(key)
+        defer { self.encoder.codingPath.removeLast() }
         dictionary.setValue(nil, forKey: key.stringValue)
+    }
+    
+    mutating func encode(_ value: Bool, forKey key: Key) throws {
+        self.encoder.codingPath.append(key)
+        defer { self.encoder.codingPath.removeLast() }
+        dictionary.setBoolean(value, forKey: key.stringValue)
+    }
+    
+    mutating func encode(_ value: String, forKey key: Key) throws {
+        self.encoder.codingPath.append(key)
+        defer { self.encoder.codingPath.removeLast() }
+        dictionary.setString(value, forKey: key.stringValue)
+    }
+    
+    mutating func encode(_ value: Double, forKey key: Key) throws {
+        self.encoder.codingPath.append(key)
+        defer { self.encoder.codingPath.removeLast() }
+        dictionary.setDouble(value, forKey: key.stringValue)
+    }
+    
+    mutating func encode(_ value: Float, forKey key: Key) throws {
+        self.encoder.codingPath.append(key)
+        defer { self.encoder.codingPath.removeLast() }
+        dictionary.setFloat(value, forKey: key.stringValue)
+    }
+    
+    mutating func encode(_ value: Int, forKey key: Key) throws {
+        self.encoder.codingPath.append(key)
+        defer { self.encoder.codingPath.removeLast() }
+        dictionary.setInt(value, forKey: key.stringValue)
+    }
+    
+    mutating func encode(_ value: Int8, forKey key: Key) throws {
+        self.encoder.codingPath.append(key)
+        defer { self.encoder.codingPath.removeLast() }
+        dictionary.setValue(value, forKey: key.stringValue)
+    }
+    
+    mutating func encode(_ value: Int16, forKey key: Key) throws {
+        self.encoder.codingPath.append(key)
+        defer { self.encoder.codingPath.removeLast() }
+        dictionary.setValue(value, forKey: key.stringValue)
+    }
+    
+    mutating func encode(_ value: Int32, forKey key: Key) throws {
+        self.encoder.codingPath.append(key)
+        defer { self.encoder.codingPath.removeLast() }
+        dictionary.setValue(value, forKey: key.stringValue)
+    }
+    
+    mutating func encode(_ value: Int64, forKey key: Key) throws {
+        self.encoder.codingPath.append(key)
+        defer { self.encoder.codingPath.removeLast() }
+        dictionary.setInt64(value, forKey: key.stringValue)
+    }
+    
+    mutating func encode(_ value: UInt, forKey key: Key) throws {
+        self.encoder.codingPath.append(key)
+        defer { self.encoder.codingPath.removeLast() }
+        dictionary.setValue(value, forKey: key.stringValue)
+    }
+    
+    mutating func encode(_ value: UInt8, forKey key: Key) throws {
+        self.encoder.codingPath.append(key)
+        defer { self.encoder.codingPath.removeLast() }
+        dictionary.setValue(value, forKey: key.stringValue)
+    }
+    
+    mutating func encode(_ value: UInt16, forKey key: Key) throws {
+        self.encoder.codingPath.append(key)
+        defer { self.encoder.codingPath.removeLast() }
+        dictionary.setValue(value, forKey: key.stringValue)
+    }
+    
+    mutating func encode(_ value: UInt32, forKey key: Key) throws {
+        self.encoder.codingPath.append(key)
+        defer { self.encoder.codingPath.removeLast() }
+        dictionary.setValue(value, forKey: key.stringValue)
+    }
+    
+    mutating func encode(_ value: UInt64, forKey key: Key) throws {
+        self.encoder.codingPath.append(key)
+        defer { self.encoder.codingPath.removeLast() }
+        dictionary.setValue(value, forKey: key.stringValue)
     }
     
     mutating func encode<T>(_ value: T, forKey key: Key) throws where T : Encodable {
         self.encoder.codingPath.append(key)
         defer { self.encoder.codingPath.removeLast() }
-        
-        let boxed = try encoder.boxValue(value)
-        dictionary.setValue(boxed, forKey: key.stringValue)
+        dictionary.setValue(try encoder.box(value), forKey: key.stringValue)
     }
-    
+
     mutating func nestedContainer<NestedKey>(keyedBy keyType: NestedKey.Type, forKey key: Key) -> KeyedEncodingContainer<NestedKey> where NestedKey : CodingKey {
         self.encoder.codingPath.append(key)
         defer { self.encoder.codingPath.removeLast() }
@@ -148,15 +265,99 @@ private struct ArrayEncodingContainer: UnkeyedEncodingContainer {
     var count: Int { return array.count }
     
     mutating func encodeNil() throws {
+        self.encoder.codingPath.append(IndexCodingKey(intValue: self.count)!)
+        defer { self.encoder.codingPath.removeLast() }
         array.addValue(nil)
+    }
+    
+    mutating func encode(_ value: Bool) throws {
+        self.encoder.codingPath.append(IndexCodingKey(intValue: self.count)!)
+        defer { self.encoder.codingPath.removeLast() }
+        array.addBoolean(value)
+    }
+    
+    mutating func encode(_ value: String) throws {
+        self.encoder.codingPath.append(IndexCodingKey(intValue: self.count)!)
+        defer { self.encoder.codingPath.removeLast() }
+        array.addString(value)
+    }
+    
+    mutating func encode(_ value: Double) throws {
+        self.encoder.codingPath.append(IndexCodingKey(intValue: self.count)!)
+        defer { self.encoder.codingPath.removeLast() }
+        array.addDouble(value)
+    }
+    
+    mutating func encode(_ value: Float) throws {
+        self.encoder.codingPath.append(IndexCodingKey(intValue: self.count)!)
+        defer { self.encoder.codingPath.removeLast() }
+        array.addFloat(value)
+    }
+    
+    mutating func encode(_ value: Int) throws {
+        self.encoder.codingPath.append(IndexCodingKey(intValue: self.count)!)
+        defer { self.encoder.codingPath.removeLast() }
+        array.addInt(value)
+    }
+    
+    mutating func encode(_ value: Int8) throws {
+        self.encoder.codingPath.append(IndexCodingKey(intValue: self.count)!)
+        defer { self.encoder.codingPath.removeLast() }
+        array.addValue(value)
+    }
+    
+    mutating func encode(_ value: Int16) throws {
+        self.encoder.codingPath.append(IndexCodingKey(intValue: self.count)!)
+        defer { self.encoder.codingPath.removeLast() }
+        array.addValue(value)
+    }
+    
+    mutating func encode(_ value: Int32) throws {
+        self.encoder.codingPath.append(IndexCodingKey(intValue: self.count)!)
+        defer { self.encoder.codingPath.removeLast() }
+        array.addValue(value)
+    }
+    
+    mutating func encode(_ value: Int64) throws {
+        self.encoder.codingPath.append(IndexCodingKey(intValue: self.count)!)
+        defer { self.encoder.codingPath.removeLast() }
+        array.addInt64(value)
+    }
+    
+    mutating func encode(_ value: UInt) throws {
+        self.encoder.codingPath.append(IndexCodingKey(intValue: self.count)!)
+        defer { self.encoder.codingPath.removeLast() }
+        array.addValue(value)
+    }
+    
+    mutating func encode(_ value: UInt8) throws {
+        self.encoder.codingPath.append(IndexCodingKey(intValue: self.count)!)
+        defer { self.encoder.codingPath.removeLast() }
+        array.addValue(value)
+    }
+    
+    mutating func encode(_ value: UInt16) throws {
+        self.encoder.codingPath.append(IndexCodingKey(intValue: self.count)!)
+        defer { self.encoder.codingPath.removeLast() }
+        array.addValue(value)
+    }
+    
+    mutating func encode(_ value: UInt32) throws {
+        self.encoder.codingPath.append(IndexCodingKey(intValue: self.count)!)
+        defer { self.encoder.codingPath.removeLast() }
+        array.addValue(value)
+    }
+    
+    mutating func encode(_ value: UInt64) throws {
+        self.encoder.codingPath.append(IndexCodingKey(intValue: self.count)!)
+        defer { self.encoder.codingPath.removeLast() }
+        array.addValue(value)
     }
     
     mutating func encode<T>(_ value: T) throws where T : Encodable {
         self.encoder.codingPath.append(IndexCodingKey(intValue: self.count)!)
         defer { self.encoder.codingPath.removeLast() }
-        
-        let boxed = try encoder.boxValue(value)
-        array.addValue(boxed)
+        array.addValue(try encoder.box(value))
     }
     
     mutating func nestedContainer<NestedKey>(keyedBy keyType: NestedKey.Type) -> KeyedEncodingContainer<NestedKey> where NestedKey : CodingKey {
@@ -192,10 +393,90 @@ private struct ValueEncodingContainer: SingleValueEncodingContainer {
     
     let codingPath: [CodingKey]
     
-    mutating func encodeNil() throws { }
+    mutating func encodeNil() throws {
+        assertCanEncodeNewValue()
+        self.encoder.pushStorage(NSNull())
+    }
     
+    mutating func encode(_ value: Bool) throws {
+        assertCanEncodeNewValue()
+        self.encoder.pushStorage(value)
+    }
+    
+    mutating func encode(_ value: String) throws {
+        assertCanEncodeNewValue()
+        self.encoder.pushStorage(value)
+    }
+    
+    mutating func encode(_ value: Double) throws {
+        assertCanEncodeNewValue()
+        self.encoder.pushStorage(value)
+    }
+    
+    mutating func encode(_ value: Float) throws {
+        assertCanEncodeNewValue()
+        self.encoder.pushStorage(value)
+    }
+    
+    mutating func encode(_ value: Int) throws {
+        assertCanEncodeNewValue()
+        self.encoder.pushStorage(value)
+    }
+    
+    mutating func encode(_ value: Int8) throws {
+        assertCanEncodeNewValue()
+        self.encoder.pushStorage(value)
+    }
+    
+    mutating func encode(_ value: Int16) throws {
+        assertCanEncodeNewValue()
+        self.encoder.pushStorage(value)
+    }
+    
+    mutating func encode(_ value: Int32) throws {
+        assertCanEncodeNewValue()
+        self.encoder.pushStorage(value)
+    }
+    
+    mutating func encode(_ value: Int64) throws {
+        assertCanEncodeNewValue()
+        self.encoder.pushStorage(value)
+    }
+    
+    mutating func encode(_ value: UInt) throws {
+        assertCanEncodeNewValue()
+        self.encoder.pushStorage(value)
+    }
+    
+    mutating func encode(_ value: UInt8) throws {
+        assertCanEncodeNewValue()
+        self.encoder.pushStorage(value)
+    }
+    
+    mutating func encode(_ value: UInt16) throws {
+        assertCanEncodeNewValue()
+        self.encoder.pushStorage(value)
+    }
+    
+    mutating func encode(_ value: UInt32) throws {
+        assertCanEncodeNewValue()
+        self.encoder.pushStorage(value)
+    }
+    
+    mutating func encode(_ value: UInt64) throws {
+        assertCanEncodeNewValue()
+        self.encoder.pushStorage(value)
+    }
+        
     mutating func encode<T>(_ value: T) throws where T : Encodable {
-        try value.encode(to: self.encoder)
+        assertCanEncodeNewValue()
+        self.encoder.pushStorage(try encoder.box(value))
+    }
+    
+    private func assertCanEncodeNewValue() {
+        precondition(self.encoder.canEncodeNewValue,
+                     "Attempt to encode value through single value container when previously " +
+                     "value already encoded.")
     }
 }
 
@@ -215,10 +496,27 @@ struct IndexCodingKey : CodingKey {
     }
 }
 
+// Error
+
+extension EncodingError {
+    static func invalidValueError(value: Any, path: [CodingKey]) -> EncodingError {
+        let description = "Unsupported or invalid value type to encode"
+        let context = EncodingError.Context(codingPath: path, debugDescription: description)
+        return EncodingError.invalidValue(value, context)
+    }
+}
+
 // CBL's Value
 
-extension Blob : Encodable {
-    public func encode(to encoder: Encoder) throws { fatalError() }
+extension Blob : CBLEncodable {
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(self)
+    }
+    
+    convenience init(data: Data) {
+        self.init(contentType: "application/octet-stream", data: data)
+    }
 }
 
 // Optional

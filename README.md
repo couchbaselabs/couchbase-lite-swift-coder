@@ -22,7 +22,6 @@ An experiment using Swift's Encoder/Decoder to develop data model for Couchbase 
 * Array of the types above
 
 ## Future Features
-* Support SingleValueContainer for custom encoding and decoding
 * Support More Data Types
 * Support Document Relationship
 

@@ -95,8 +95,7 @@ extension _CBLDecoder {
         return number.floatValue
     }
     
-    func unbox(_ value: Any, as type: Int.Type) throws -> Int {
-        if let int = value as? Int { return int }
+    public func unbox(_ value: Any, as type: Int.Type) throws -> Int {
         guard let number = value as? NSNumber else {
             throw DecodingError.typeMismatchError(type, value, self.codingPath)
         }
@@ -414,121 +413,51 @@ private struct ArrayDecodingContainer: UnkeyedDecodingContainer {
         return false
     }
     
-    mutating func decode(_ type: Bool.Type) throws -> Bool {
-        self.decoder.codingPath.append(IndexCodingKey(intValue: currentIndex)!)
-        defer { self.decoder.codingPath.removeLast() }
-        defer { self.currentIndex += 1 }
-        return try decoder.unbox(array.value(at: currentIndex)!, as: Bool.self)
-    }
-    
-    mutating func decode(_ type: String.Type) throws -> String {
-        self.decoder.codingPath.append(IndexCodingKey(intValue: currentIndex)!)
-        defer { self.decoder.codingPath.removeLast() }
-        defer { self.currentIndex += 1 }
-        return try decoder.unbox(array.value(at: currentIndex)!, as: String.self)
-    }
-    
-    mutating func decode(_ type: Double.Type) throws -> Double {
-        self.decoder.codingPath.append(IndexCodingKey(intValue: currentIndex)!)
-        defer { self.decoder.codingPath.removeLast() }
-        defer { self.currentIndex += 1 }
-        return try decoder.unbox(array.value(at: currentIndex)!, as: Double.self)
-    }
-    
-    mutating func decode(_ type: Float.Type) throws -> Float {
-        self.decoder.codingPath.append(IndexCodingKey(intValue: currentIndex)!)
-        defer { self.decoder.codingPath.removeLast() }
-        defer { self.currentIndex += 1 }
-        return try decoder.unbox(array.value(at: currentIndex)!, as: Float.self)
-    }
-    
-    mutating func decode(_ type: Int.Type) throws -> Int {
-        self.decoder.codingPath.append(IndexCodingKey(intValue: currentIndex)!)
-        defer { self.decoder.codingPath.removeLast() }
-        defer { self.currentIndex += 1 }
-        return try decoder.unbox(array.value(at: currentIndex)!, as: Int.self)
-    }
-    
-    mutating func decode(_ type: Int8.Type) throws -> Int8 {
-        self.decoder.codingPath.append(IndexCodingKey(intValue: currentIndex)!)
-        defer { self.decoder.codingPath.removeLast() }
-        defer { self.currentIndex += 1 }
-        return try decoder.unbox(array.value(at: currentIndex)!, as: Int8.self)
-    }
-    
-    mutating func decode(_ type: Int16.Type) throws -> Int16 {
-        self.decoder.codingPath.append(IndexCodingKey(intValue: currentIndex)!)
-        defer { self.decoder.codingPath.removeLast() }
-        defer { self.currentIndex += 1 }
-        return try decoder.unbox(array.value(at: currentIndex)!, as: Int16.self)
-    }
-    
-    mutating func decode(_ type: Int32.Type) throws -> Int32 {
-        self.decoder.codingPath.append(IndexCodingKey(intValue: currentIndex)!)
-        defer { self.decoder.codingPath.removeLast() }
-        defer { self.currentIndex += 1 }
-        return try decoder.unbox(array.value(at: currentIndex)!, as: Int32.self)
-    }
-    
-    mutating func decode(_ type: Int64.Type) throws -> Int64 {
-        self.decoder.codingPath.append(IndexCodingKey(intValue: currentIndex)!)
-        defer { self.decoder.codingPath.removeLast() }
-        defer { self.currentIndex += 1 }
-        return try decoder.unbox(array.value(at: currentIndex)!, as: Int64.self)
-    }
-    
-    mutating func decode(_ type: UInt.Type) throws -> UInt {
-        self.decoder.codingPath.append(IndexCodingKey(intValue: currentIndex)!)
-        defer { self.decoder.codingPath.removeLast() }
-        defer { self.currentIndex += 1 }
-        return try decoder.unbox(array.value(at: currentIndex)!, as: UInt.self)
-    }
-    
-    mutating func decode(_ type: UInt8.Type) throws -> UInt8 {
-        self.decoder.codingPath.append(IndexCodingKey(intValue: currentIndex)!)
-        defer { self.decoder.codingPath.removeLast() }
-        defer { self.currentIndex += 1 }
-        return try decoder.unbox(array.value(at: currentIndex)!, as: UInt8.self)
-    }
-    
-    mutating func decode(_ type: UInt16.Type) throws -> UInt16 {
-        self.decoder.codingPath.append(IndexCodingKey(intValue: currentIndex)!)
-        defer { self.decoder.codingPath.removeLast() }
-        defer { self.currentIndex += 1 }
-        return try decoder.unbox(array.value(at: currentIndex)!, as: UInt16.self)
-    }
-    
-    mutating func decode(_ type: UInt32.Type) throws -> UInt32 {
-        self.decoder.codingPath.append(IndexCodingKey(intValue: currentIndex)!)
-        defer { self.decoder.codingPath.removeLast() }
-        defer { self.currentIndex += 1 }
-        return try decoder.unbox(array.value(at: currentIndex)!, as: UInt32.self)
-    }
-    
-    mutating func decode(_ type: UInt64.Type) throws -> UInt64 {
-        self.decoder.codingPath.append(IndexCodingKey(intValue: currentIndex)!)
-        defer { self.decoder.codingPath.removeLast() }
-        defer { self.currentIndex += 1 }
-        return try decoder.unbox(array.value(at: currentIndex)!, as: UInt64.self)
-    }
-    
-    mutating func decode<T>(_ type: T.Type) throws -> T where T : Decodable {
+    public mutating func decode<T: Decodable>(_ type: T.Type) throws -> T {
         self.decoder.codingPath.append(IndexCodingKey(intValue: currentIndex)!)
         defer { self.decoder.codingPath.removeLast() }
         defer { self.currentIndex += 1 }
         
+        // Workaround:
+        // With the synthesized code, the UnkeyedDecodingContainer is not called with any
+        // typed overloading decode methods, check type and unbox the value directly. Note
+        // that the same problem doesn't occur to KeyedDecodingContainer.
         var value: Any?
         switch type {
+        case is Bool.Type:
+            value = try self.decoder.unbox(array.value(at: currentIndex)!, as: Bool.self)
+        case is String.Type:
+            value = try self.decoder.unbox(array.value(at: currentIndex)!, as: String.self)
+        case is Double.Type:
+            value = try self.decoder.unbox(array.value(at: currentIndex)!, as: Double.self)
+        case is Float.Type:
+            value = try self.decoder.unbox(array.value(at: currentIndex)!, as: Float.self)
+        case is Int.Type:
+            value = try self.decoder.unbox(array.value(at: currentIndex)!, as: Int.self)
+        case is Int8.Type:
+            value = try self.decoder.unbox(array.value(at: currentIndex)!, as: Int8.self)
+        case is Int16.Type:
+            value = try self.decoder.unbox(array.value(at: currentIndex)!, as: Int16.self)
+        case is Int32.Type:
+            value = try self.decoder.unbox(array.value(at: currentIndex)!, as: Int32.self)
+        case is Int64.Type:
+            value = try self.decoder.unbox(array.value(at: currentIndex)!, as: Int64.self)
+        case is UInt.Type:
+            value = try self.decoder.unbox(array.value(at: currentIndex)!, as: UInt.self)
+        case is UInt8.Type:
+            value = try self.decoder.unbox(array.value(at: currentIndex)!, as: UInt8.self)
+        case is UInt16.Type:
+            value = try self.decoder.unbox(array.value(at: currentIndex)!, as: UInt16.self)
+        case is UInt32.Type:
+            value = try self.decoder.unbox(array.value(at: currentIndex)!, as: UInt32.self)
+        case is UInt64.Type:
+            value = try self.decoder.unbox(array.value(at: currentIndex)!, as: UInt64.self)
         case is Date.Type:
-            value = array.date(at: currentIndex)
+            value = try self.decoder.unbox(array.date(at: currentIndex)!, as: Date.self)
         default:
-            value = array.value(at: currentIndex)
+            value = try self.decoder.unbox(array.value(at: currentIndex)!, as: type)
         }
-        guard let v = value else {
-            let rawValue = array.value(at: currentIndex)!
-            throw DecodingError.typeMismatchError(type, rawValue, self.decoder.codingPath)
-        }
-        return try self.decoder.unbox(v, as: type)
+        return value as! T
     }
     
     mutating func nestedContainer<NestedKey>(keyedBy type: NestedKey.Type) throws

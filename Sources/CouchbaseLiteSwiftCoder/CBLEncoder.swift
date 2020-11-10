@@ -270,94 +270,33 @@ private struct ArrayEncodingContainer: UnkeyedEncodingContainer {
         array.addValue(nil)
     }
     
-    mutating func encode(_ value: Bool) throws {
-        self.encoder.codingPath.append(IndexCodingKey(intValue: self.count)!)
-        defer { self.encoder.codingPath.removeLast() }
-        array.addBoolean(value)
-    }
-    
-    mutating func encode(_ value: String) throws {
-        self.encoder.codingPath.append(IndexCodingKey(intValue: self.count)!)
-        defer { self.encoder.codingPath.removeLast() }
-        array.addString(value)
-    }
-    
-    mutating func encode(_ value: Double) throws {
-        self.encoder.codingPath.append(IndexCodingKey(intValue: self.count)!)
-        defer { self.encoder.codingPath.removeLast() }
-        array.addDouble(value)
-    }
-    
-    mutating func encode(_ value: Float) throws {
-        self.encoder.codingPath.append(IndexCodingKey(intValue: self.count)!)
-        defer { self.encoder.codingPath.removeLast() }
-        array.addFloat(value)
-    }
-    
-    mutating func encode(_ value: Int) throws {
-        self.encoder.codingPath.append(IndexCodingKey(intValue: self.count)!)
-        defer { self.encoder.codingPath.removeLast() }
-        array.addInt(value)
-    }
-    
-    mutating func encode(_ value: Int8) throws {
-        self.encoder.codingPath.append(IndexCodingKey(intValue: self.count)!)
-        defer { self.encoder.codingPath.removeLast() }
-        array.addValue(value)
-    }
-    
-    mutating func encode(_ value: Int16) throws {
-        self.encoder.codingPath.append(IndexCodingKey(intValue: self.count)!)
-        defer { self.encoder.codingPath.removeLast() }
-        array.addValue(value)
-    }
-    
-    mutating func encode(_ value: Int32) throws {
-        self.encoder.codingPath.append(IndexCodingKey(intValue: self.count)!)
-        defer { self.encoder.codingPath.removeLast() }
-        array.addValue(value)
-    }
-    
-    mutating func encode(_ value: Int64) throws {
-        self.encoder.codingPath.append(IndexCodingKey(intValue: self.count)!)
-        defer { self.encoder.codingPath.removeLast() }
-        array.addInt64(value)
-    }
-    
-    mutating func encode(_ value: UInt) throws {
-        self.encoder.codingPath.append(IndexCodingKey(intValue: self.count)!)
-        defer { self.encoder.codingPath.removeLast() }
-        array.addValue(value)
-    }
-    
-    mutating func encode(_ value: UInt8) throws {
-        self.encoder.codingPath.append(IndexCodingKey(intValue: self.count)!)
-        defer { self.encoder.codingPath.removeLast() }
-        array.addValue(value)
-    }
-    
-    mutating func encode(_ value: UInt16) throws {
-        self.encoder.codingPath.append(IndexCodingKey(intValue: self.count)!)
-        defer { self.encoder.codingPath.removeLast() }
-        array.addValue(value)
-    }
-    
-    mutating func encode(_ value: UInt32) throws {
-        self.encoder.codingPath.append(IndexCodingKey(intValue: self.count)!)
-        defer { self.encoder.codingPath.removeLast() }
-        array.addValue(value)
-    }
-    
-    mutating func encode(_ value: UInt64) throws {
-        self.encoder.codingPath.append(IndexCodingKey(intValue: self.count)!)
-        defer { self.encoder.codingPath.removeLast() }
-        array.addValue(value)
-    }
-    
     mutating func encode<T>(_ value: T) throws where T : Encodable {
         self.encoder.codingPath.append(IndexCodingKey(intValue: self.count)!)
         defer { self.encoder.codingPath.removeLast() }
-        array.addValue(try encoder.box(value))
+        
+        // Workaround:
+        // With the synthesized code, the UnkeyedEncodingContainer is not called with any
+        // typed overloading encode methods, check type and encode value directly. Note
+        // that the same problem doesn't occur to KeyedEncodingContainer.
+        switch value {
+        case is Bool,
+             is String,
+             is Double,
+             is Float,
+             is Int,
+             is Int8,
+             is Int16,
+             is Int32,
+             is Int64,
+             is UInt,
+             is UInt8,
+             is UInt16,
+             is UInt32,
+             is UInt64:
+            array.addValue(value)
+        default:
+            array.addValue(try self.encoder.box(value))
+        }
     }
     
     mutating func nestedContainer<NestedKey>(keyedBy keyType: NestedKey.Type) -> KeyedEncodingContainer<NestedKey> where NestedKey : CodingKey {

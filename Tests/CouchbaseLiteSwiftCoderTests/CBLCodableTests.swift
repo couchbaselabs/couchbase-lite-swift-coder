@@ -3,7 +3,7 @@ import CouchbaseLiteSwift
 @testable import CouchbaseLiteSwiftCoder
 
 final class CBLCodableTests: XCTestCase {
-    func testEncoder() throws {
+    func testEncode() throws {
         let address = Address(street: "1 Main Street")
         var person = Person(name: "Daniel", address: address)
         
@@ -32,7 +32,7 @@ final class CBLCodableTests: XCTestCase {
         XCTAssertEqual(doc.blob(forKey: "photo"), photo)
     }
     
-    func testDecoder() throws {
+    func testDecode() throws {
         let doc = MutableDocument(data: [
             "name": "Daniel",
             "dob": "2000-01-01T00:00:00.000Z",
@@ -63,7 +63,7 @@ final class CBLCodableTests: XCTestCase {
         XCTAssertEqual(person.dependents, 2)
     }
     
-    func testCustomEncoder() throws {
+    func testCustomEncode() throws {
         var person = CustomPerson(name: "Daniel")
         
         let encoder = CBLEncoder()
@@ -91,7 +91,7 @@ final class CBLCodableTests: XCTestCase {
         XCTAssertEqual(doc.blob(forKey: "photo"), photo)
     }
     
-    func testCustomDecoder() throws {
+    func testCustomDecode() throws {
         let doc = MutableDocument(data: [
             "fullName": "Daniel"
         ])
@@ -128,7 +128,7 @@ final class CBLCodableTests: XCTestCase {
         XCTAssertEqual(person.dependents, 2)
     }
     
-    func testTypedEncoder() throws {
+    func testTypedEncode() throws {
         let content = "MyData".data(using: .utf8)!
         let blob = Blob(contentType: "text/plain", data: content)
         
@@ -158,7 +158,7 @@ final class CBLCodableTests: XCTestCase {
         XCTAssertEqual(doc.blob(forKey: "blob")?.content, content)
     }
     
-    func testTypedDecoder() throws {
+    func testTypedDecode() throws {
         let content = "MyData".data(using: .utf8)!
         let blob = Blob(contentType: "text/plain", data: content)
         
@@ -191,7 +191,7 @@ final class CBLCodableTests: XCTestCase {
         XCTAssertEqual(model.blob.content, content)
     }
     
-    func testOptTypedEncoder() throws {
+    func testOptTypedEncode() throws {
         let content = "MyData".data(using: .utf8)!
         let blob = Blob(contentType: "text/plain", data: content)
         
@@ -240,7 +240,7 @@ final class CBLCodableTests: XCTestCase {
         XCTAssertEqual(doc.blob(forKey: "blob")?.content, content)
     }
     
-    func testOptTypedDecoder() throws {
+    func testOptTypedDecode() throws {
         var doc = MutableDocument()
         
         let content = "MyData".data(using: .utf8)!
@@ -291,6 +291,198 @@ final class CBLCodableTests: XCTestCase {
         XCTAssertEqual(model.date, "2000-01-01T00:00:00.000Z".toDate())
         XCTAssertEqual(model.data, content)
         XCTAssertEqual(model.blob?.content, content)
+    }
+    
+    func testArrayEncode() throws {
+        let date1 = "2000-01-01T00:00:00.000Z".toDate()
+        let date2 = "2000-02-01T00:00:00.000Z".toDate()
+        let data1 = "MyData1".data(using: .utf8)!
+        let data2 = "MyData2".data(using: .utf8)!
+        let blob1 = Blob(contentType: "text/plain", data: data1)
+        let blob2 = Blob(contentType: "text/plain", data: data2)
+        let person1 = Person(name: "Daniel", address: Address(street: "1 Main Street"))
+        let person2 = Person(name: "James", address: Address(street: "2 Main Street"))
+        
+        var model = ArrayModel(
+            bool: [],
+            int: [],
+            string: [],
+            date: [],
+            data: [],
+            blob: [],
+            codable: [])
+        
+        let encoder = CBLEncoder()
+        var doc = try encoder.encode(model)
+        XCTAssertTrue(doc.toDictionary() == [
+            "bool": [],
+            "int": [],
+            "string": [],
+            "date": [],
+            "data": [],
+            "blob": [],
+            "codable": []
+        ])
+        
+        model = ArrayModel(
+            bool: [true, false],
+            int: [1, 2],
+            string: ["s1", "s2"],
+            date: [date1, date2],
+            data: [data1, data2],
+            blob: [blob1, blob2],
+            codable: [person1, person2])
+        
+        doc = try encoder.encode(model)
+        XCTAssertTrue(doc.toDictionary() == [
+            "bool": [true, false],
+            "int": [1, 2],
+            "string": ["s1", "s2"],
+            "date": ["2000-01-01T00:00:00.000Z", "2000-02-01T00:00:00.000Z"],
+            "data": doc.array(forKey: "data")!.toArray(),
+            "blob": doc.array(forKey: "blob")!.toArray(),
+            "codable": [["name": "Daniel", "address": ["street": "1 Main Street"]],
+                         ["name": "James", "address": ["street": "2 Main Street"]]]
+        ])
+        XCTAssertEqual(doc.array(forKey: "data")!.toArray().map { ($0 as! Blob).content}, [data1, data2])
+        XCTAssertEqual(doc.array(forKey: "blob")!.toArray().map { ($0 as! Blob).content}, [data1, data2])
+    }
+    
+    func testArrayDecode() throws {
+        let date1 = "2000-01-01T00:00:00.000Z".toDate()
+        let date2 = "2000-02-01T00:00:00.000Z".toDate()
+        let data1 = "MyData1".data(using: .utf8)!
+        let data2 = "MyData2".data(using: .utf8)!
+        let blob1 = Blob(contentType: "text/plain", data: data1)
+        let blob2 = Blob(contentType: "text/plain", data: data2)
+        let person1: [String : Any] = ["name": "Daniel", "address": ["street": "1 Main Street"]]
+        let person2: [String : Any] = ["name": "James", "address": ["street": "2 Main Street"]]
+        
+        var doc = MutableDocument(data: [
+            "bool": [],
+            "int": [],
+            "string": [],
+            "date": [],
+            "data": [],
+            "blob": [],
+            "codable": []
+        ])
+        
+        let decoder = CBLDecoder()
+        var model = try decoder.decode(ArrayModel.self, from: doc)
+        XCTAssertEqual(model.bool, [])
+        XCTAssertEqual(model.int, [])
+        XCTAssertEqual(model.string, [])
+        XCTAssertEqual(model.date, [])
+        XCTAssertEqual(model.data, [])
+        XCTAssertEqual(model.blob, [])
+        XCTAssertEqual(model.codable.count, 0)
+        
+        doc = MutableDocument(data: [
+            "bool": [true, false],
+            "int": [1, 2],
+            "string": ["s1", "s2"],
+            "date": [date1, date2],
+            "data": [data1, data2],
+            "blob": [blob1, blob2],
+            "codable": [person1, person2]
+        ])
+        
+        model = try decoder.decode(ArrayModel.self, from: doc)
+        XCTAssertEqual(model.bool, [true, false])
+        XCTAssertEqual(model.int, [1, 2])
+        XCTAssertEqual(model.string, ["s1", "s2"])
+        XCTAssertEqual(model.date, [date1, date2])
+        XCTAssertEqual(model.data, [data1, data2])
+        XCTAssertEqual(model.blob, [blob1, blob2])
+        XCTAssertEqual(model.codable[0].name, "Daniel")
+        XCTAssertEqual(model.codable[0].address?.street, "1 Main Street")
+        XCTAssertEqual(model.codable[1].name, "James")
+        XCTAssertEqual(model.codable[1].address?.street, "2 Main Street")
+    }
+    
+    func testOptArrayEncode() throws {
+        let date1 = "2000-01-01T00:00:00.000Z".toDate()
+        let date2 = "2000-02-01T00:00:00.000Z".toDate()
+        let data1 = "MyData1".data(using: .utf8)!
+        let data2 = "MyData2".data(using: .utf8)!
+        let blob1 = Blob(contentType: "text/plain", data: data1)
+        let blob2 = Blob(contentType: "text/plain", data: data2)
+        let person1 = Person(name: "Daniel", address: Address(street: "1 Main Street"))
+        let person2 = Person(name: "James", address: Address(street: "2 Main Street"))
+        
+        var model = OptArrayModel()
+        
+        let encoder = CBLEncoder()
+        var doc = try encoder.encode(model)
+        XCTAssertTrue(doc.toDictionary() == [:])
+        
+        model.bool = [true, false]
+        model.int = [1, 2]
+        model.string = ["s1", "s2"]
+        model.date = [date1, date2]
+        model.data = [data1, data2]
+        model.blob = [blob1, blob2]
+        model.codable = [person1, person2]
+        
+        doc = try encoder.encode(model)
+        XCTAssertTrue(doc.toDictionary() == [
+            "bool": [true, false],
+            "int": [1, 2],
+            "string": ["s1", "s2"],
+            "date": ["2000-01-01T00:00:00.000Z", "2000-02-01T00:00:00.000Z"],
+            "data": doc.array(forKey: "data")!.toArray(),
+            "blob": doc.array(forKey: "blob")!.toArray(),
+            "codable": [["name": "Daniel", "address": ["street": "1 Main Street"]],
+                         ["name": "James", "address": ["street": "2 Main Street"]]]
+            ])
+        XCTAssertEqual(doc.array(forKey: "data")!.toArray().map { ($0 as! Blob).content}, [data1, data2])
+        XCTAssertEqual(doc.array(forKey: "blob")!.toArray().map { ($0 as! Blob).content}, [data1, data2])
+    }
+    
+    func testOptArrayDecode() throws {
+        let date1 = "2000-01-01T00:00:00.000Z".toDate()
+        let date2 = "2000-02-01T00:00:00.000Z".toDate()
+        let data1 = "MyData1".data(using: .utf8)!
+        let data2 = "MyData2".data(using: .utf8)!
+        let blob1 = Blob(contentType: "text/plain", data: data1)
+        let blob2 = Blob(contentType: "text/plain", data: data2)
+        let person1: [String : Any] = ["name": "Daniel", "address": ["street": "1 Main Street"]]
+        let person2: [String : Any] = ["name": "James", "address": ["street": "2 Main Street"]]
+        
+        var doc = MutableDocument()
+        
+        let decoder = CBLDecoder()
+        var model = try decoder.decode(OptArrayModel.self, from: doc)
+        XCTAssertNil(model.bool)
+        XCTAssertNil(model.int)
+        XCTAssertNil(model.string)
+        XCTAssertNil(model.date)
+        XCTAssertNil(model.data)
+        XCTAssertNil(model.blob)
+        XCTAssertNil(model.codable)
+        
+        doc = MutableDocument(data: [
+            "bool": [true, false],
+            "int": [1, 2],
+            "string": ["s1", "s2"],
+            "date": [date1, date2],
+            "data": [data1, data2],
+            "blob": [blob1, blob2],
+            "codable": [person1, person2]
+        ])
+        model = try decoder.decode(OptArrayModel.self, from: doc)
+        
+        XCTAssertEqual(model.bool, [true, false])
+        XCTAssertEqual(model.int, [1, 2])
+        XCTAssertEqual(model.string, ["s1", "s2"])
+        XCTAssertEqual(model.date, [date1, date2])
+        XCTAssertEqual(model.data, [data1, data2])
+        XCTAssertEqual(model.blob, [blob1, blob2])
+        XCTAssertEqual(model.codable![0].name, "Daniel")
+        XCTAssertEqual(model.codable![0].address?.street, "1 Main Street")
+        XCTAssertEqual(model.codable![1].name, "James")
+        XCTAssertEqual(model.codable![1].address?.street, "2 Main Street")
     }
 }
 

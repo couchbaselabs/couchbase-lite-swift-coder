@@ -116,6 +116,74 @@ struct OptTypedModel: CBLCodable {
     var blob: Blob?
 }
 
+struct ArrayModel: DocumentCodable {
+    var document: MutableDocument!
+    
+    var bool: [Bool]
+    var int: [Int]
+    var string: [String]
+    var date: [Date]
+    var data: [Data]
+    var blob: [Blob]
+    var codable: [Person]
+    
+    enum CodingKeys: String, CodingKey {
+        case bool, int, string, date, data, blob, codable
+    }
+    
+    init(id: String? = nil,
+         bool: [Bool],
+         int: [Int],
+         string: [String],
+         date: [Date],
+         data: [Data],
+         blob: [Blob],
+         codable: [Person]) {
+        self.document = MutableDocument(id: id)
+        self.bool = bool
+        self.int = int
+        self.string = string
+        self.date = date
+        self.data = data
+        self.blob = blob
+        self.codable = codable
+    }
+}
+
+struct OptArrayModel: DocumentCodable {
+    var document: MutableDocument!
+    
+    var bool: [Bool]?
+    var int: [Int]?
+    var string: [String]?
+    var date: [Date]?
+    var data: [Data]?
+    var blob: [Blob]?
+    var codable: [Person]?
+    
+    enum CodingKeys: String, CodingKey {
+        case bool, int, string, date, data, blob, codable
+    }
+    
+    init(id: String? = nil,
+         bool: [Bool]? = nil,
+         int: [Int]? = nil,
+         string: [String]? = nil,
+         date: [Date]? = nil,
+         data: [Data]? = nil,
+         blob: [Blob]? = nil,
+         codable: [Person]? = nil) {
+        self.document = MutableDocument(id: id)
+        self.bool = bool
+        self.int = int
+        self.string = string
+        self.date = date
+        self.data = data
+        self.blob = blob
+        self.codable = codable
+    }
+}
+
 struct Student: DocumentCodable {
     var document: MutableDocument!
     

@@ -30,7 +30,7 @@ extension DocumentCodable {
 extension Database {
     public func document<T: DocumentDecodable>(withID id: String, as type: T.Type) throws -> T? {
         guard let document = self.document(withID: id) else { return nil }
-        return try document.decode(type)
+        return try document.decode(as: type)
     }
     
     public func saveDocument<T: DocumentฺEncodable>(_ encodable: T) throws {
@@ -39,7 +39,7 @@ extension Database {
 }
 
 extension Document {
-    public func decode<T: DocumentDecodable>(_ type: T.Type) throws -> T {
+    public func decode<T: DocumentDecodable>(as type: T.Type) throws -> T {
         var decoable = try CBLDecoder().decode(T.self, from: self)
         decoable.decoded(for: self)
         return decoable
@@ -47,16 +47,16 @@ extension Document {
 }
 
 extension Result {
-    public func decode<T: CBLDecodable>(_ type: T.Type) throws -> T {
+    public func decode<T: CBLDecodable>(as type: T.Type) throws -> T {
         return try CBLDecoder().decode(T.self, from: self)
     }
 }
 
 extension ResultSet {
-    public func decode<T: CBLDecodable>(_ type: T.Type) throws -> [T] {
+    public func decode<T: CBLDecodable>(as type: T.Type) throws -> [T] {
         var decoded: [T] = []
         for result in self.allResults() {
-            decoded.append(try result.decode(type))
+            decoded.append(try result.decode(as: type))
         }
         return decoded
     }

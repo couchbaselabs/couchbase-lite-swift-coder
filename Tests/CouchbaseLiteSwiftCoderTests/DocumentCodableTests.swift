@@ -82,7 +82,7 @@ final class DocumentCodableTests: XCTestCase {
             "photo": photo
         ]
         let doc = MutableDocument(id: "doc1", data: data)
-        let student = try doc.decode(Student.self)
+        let student = try doc.decode(as: Student.self)
         
         XCTAssertEqual(student.document, doc)
         XCTAssertEqual(student.name, "Daniel")
@@ -113,7 +113,7 @@ final class DocumentCodableTests: XCTestCase {
             .from(DataSource.database(self.db))
         
         var results = try query.execute()
-        var student = try results.allResults().first?.decode(Student.self)
+        var student = try results.allResults().first?.decode(as: Student.self)
         XCTAssertEqual(student?.name, "Daniel")
         XCTAssertEqual(student?.address?.street, "1 Main Street")
         XCTAssertEqual(student?.dob, "1980-01-01T00:00:00.000Z".toDate())
@@ -122,7 +122,7 @@ final class DocumentCodableTests: XCTestCase {
         XCTAssertEqual(student?.photo?.content, photo.content)
         
         results = try query.execute()
-        let students = try results.decode(Student.self)
+        let students = try results.decode(as: Student.self)
         XCTAssertEqual(students.count, 1)
         student = students.first
         XCTAssertEqual(student?.name, "Daniel")

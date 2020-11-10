@@ -223,16 +223,16 @@ func saveDocument<T: DocumentฺEncodable>(_ encodable: T) throws
 
 #### Document
 ```Swift
-func decode<T: DocumentDecodable>(_ type: T.Type) throws -> T
+func decode<T: DocumentDecodable>(as type: T.Type) throws -> T
 ```
 
 #### Result
 ```Swift
-func decode<T: CBLDecodable>(_ type: T.Type) throws -> T
+func decode<T: CBLDecodable>(as type: T.Type) throws -> T
 ```
 
 #### ResultSet
 ```Swift
-func decode<T: CBLDecodable>(_ type: T.Type) throws -> [T]
+func decode<T: CBLDecodable>(as type: T.Type) throws -> [T]
 ```
 

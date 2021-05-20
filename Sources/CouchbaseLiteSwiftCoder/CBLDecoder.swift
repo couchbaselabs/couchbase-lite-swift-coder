@@ -339,8 +339,9 @@ private struct DictionaryDecodingContainer<Key: CodingKey>: KeyedDecodingContain
         }
         
         guard let v = value else {
-            let rawValue = dictionary.value(forKey: key.stringValue)!
-            throw DecodingError.typeMismatchError(type, rawValue, self.decoder.codingPath)
+            if let rawValue = dictionary.value(forKey: key.stringValue) {
+                throw DecodingError.typeMismatchError(type, rawValue, self.decoder.codingPath)
+            }
         }
         return try self.decoder.unbox(v, as: type)
     }

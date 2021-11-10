@@ -4,6 +4,7 @@ import CouchbaseLiteSwift
 public protocol CBLEncodable: Encodable { }
 
 open class CBLEncoder {
+    public init() {}
     public func encode<T: CBLEncodable>(_ value: T) throws -> MutableDocument {
         return try encode(value, into: MutableDocument())
     }

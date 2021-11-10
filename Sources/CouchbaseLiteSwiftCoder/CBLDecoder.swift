@@ -3,7 +3,7 @@ import CouchbaseLiteSwift
 
 public protocol CBLDecodable: Decodable { }
 
-public class CBLDecoder {
+open class CBLDecoder {
     public func decode<T: CBLDecodable>(_ type: T.Type, from document: Document) throws -> T {
         let decoder = _CBLDecoder(with: document)
         return try type.init(from: decoder)
